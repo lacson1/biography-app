@@ -1,39 +1,184 @@
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, Calendar, Target, Sparkles, Clock, BookOpen } from 'lucide-react';
+import { Lightbulb, Calendar, Target, Sparkles, Clock, BookOpen, Brain, Zap } from 'lucide-react';
 
-const WritingPrompts = ({ onPromptSelect, currentSection }) => {
-        const [selectedCategory, setSelectedCategory] = useState('daily');
+const WritingPrompts = ({ onPromptSelect, currentSection, formData }) => {
+        const [selectedCategory, setSelectedCategory] = useState('intelligent');
         const [currentPrompt, setCurrentPrompt] = useState(null);
+        const [intelligentPrompts, setIntelligentPrompts] = useState([]);
 
         const promptCategories = {
+            intelligent: {
+                title: 'Smart Prompts',
+                icon: Brain,
+                color: 'from-purple-500 to-indigo-600',
+                description: 'AI-powered suggestions based on your story'
+            },
             daily: {
                 title: 'Daily Prompts',
                 icon: Calendar,
-                color: 'from-blue-500 to-indigo-600'
+                color: 'from-blue-500 to-indigo-600',
+                description: 'General writing prompts for any day'
             },
             childhood: {
                 title: 'Childhood Memories',
                 icon: BookOpen,
-                color: 'from-pink-500 to-rose-600'
+                color: 'from-pink-500 to-rose-600',
+                description: 'Prompts about your early years'
             },
             family: {
                 title: 'Family Stories',
                 icon: Target,
-                color: 'from-green-500 to-emerald-600'
+                color: 'from-green-500 to-emerald-600',
+                description: 'Family-related writing prompts'
             },
             wisdom: {
                 title: 'Life Lessons',
                 icon: Lightbulb,
-                color: 'from-yellow-500 to-amber-600'
+                color: 'from-yellow-500 to-amber-600',
+                description: 'Wisdom and life experience prompts'
             },
             achievements: {
                 title: 'Proud Moments',
                 icon: Sparkles,
-                color: 'from-purple-500 to-violet-600'
+                color: 'from-orange-500 to-red-600',
+                description: 'Achievement and success prompts'
             }
         };
 
-        const prompts = {
+        // Enhanced intelligent prompts system
+        const getIntelligentPrompts = (section) => {
+            const basePrompts = {
+                overview: [
+                    "Tell us about yourself in a few sentences...",
+                    "What would you like people to know about you?",
+                    "Share a brief introduction of who you are..."
+                ],
+                childhood: [
+                    "What are your earliest memories?",
+                    "Where did you grow up and what was it like?",
+                    "What games or activities did you enjoy as a child?",
+                    "Who were your childhood friends and what did you do together?",
+                    "What was your favorite toy or possession growing up?"
+                ],
+                family: [
+                    "Tell us about your parents and siblings...",
+                    "What family traditions do you remember?",
+                    "How has your family influenced who you are today?",
+                    "What family stories have been passed down through generations?",
+                    "Describe a special family moment or celebration..."
+                ],
+                career: [
+                    "What was your first job and how did you get it?",
+                    "What career path did you choose and why?",
+                    "What challenges did you face in your professional life?",
+                    "What achievements are you most proud of in your career?",
+                    "How has your career evolved over the years?"
+                ],
+                achievements: [
+                    "What accomplishments are you most proud of?",
+                    "What challenges have you overcome in your life?",
+                    "What awards or recognition have you received?",
+                    "What goals have you achieved that seemed impossible at first?",
+                    "What legacy do you hope to leave behind?"
+                ],
+                wisdom: [
+                    "What life lessons have you learned that you'd like to share?",
+                    "What advice would you give to younger generations?",
+                    "What values are most important to you?",
+                    "How have your beliefs and perspectives changed over time?",
+                    "What would you tell your younger self if you could?"
+                ]
+            };
+
+            // Get context-aware prompts based on what's already written
+            const getContextualPrompts = () => {
+                const contextualPrompts = [];
+
+                if (!formData) return contextualPrompts;
+
+                // Check if name is mentioned in overview
+                if (formData.overview && formData.overview.length > 50) {
+                    contextualPrompts.push("You've shared a good overview. Would you like to expand on any specific aspect of your life?");
+                }
+
+                // Check if childhood is mentioned in overview
+                if (formData.overview && formData.overview.toLowerCase().includes('childhood') && !formData.childhood) {
+                    contextualPrompts.push("I noticed you mentioned your childhood in the overview. Would you like to write a dedicated section about your early years?");
+                }
+
+                // Check if family is mentioned in overview
+                if (formData.overview && formData.overview.toLowerCase().includes('family') && !formData.family) {
+                    contextualPrompts.push("You mentioned your family in the overview. Would you like to tell us more about your family story?");
+                }
+
+                // Check if career is mentioned in overview
+                if (formData.overview && formData.overview.toLowerCase().includes('career') && !formData.career) {
+                    contextualPrompts.push("You touched on your career in the overview. Would you like to expand on your professional journey?");
+                }
+
+                // Cross-reference prompts
+                if (formData.childhood && formData.childhood.length > 100 && !formData.family) {
+                    contextualPrompts.push("You've shared wonderful childhood memories. How did your family shape those early experiences?");
+                }
+
+                if (formData.career && formData.career.length > 100 && !formData.achievements) {
+                    contextualPrompts.push("You've described your career journey. What specific achievements or milestones stand out to you?");
+                }
+
+                if (formData.family && formData.family.length > 100 && !formData.wisdom) {
+                    contextualPrompts.push("Your family stories are touching. What wisdom have you gained from your family experiences?");
+                }
+
+                return contextualPrompts;
+            };
+
+            // Get progress-based prompts
+            const getProgressPrompts = () => {
+                if (!formData) return [];
+
+                const totalSections = 6; // overview, childhood, family, career, achievements, wisdom
+                const completedSections = Object.values(formData).filter(value =>
+                    typeof value === 'string' && value.trim().length > 50
+                ).length;
+
+                const progressPercentage = (completedSections / totalSections) * 100;
+
+                if (progressPercentage < 25) {
+                    return ["You're just getting started! What would you like to share first about your life story?"];
+                } else if (progressPercentage < 50) {
+                    return ["Great progress! You're building a wonderful story. What aspect would you like to explore next?"];
+                } else if (progressPercentage < 75) {
+                    return ["You're more than halfway there! What else would you like to add to complete your story?"];
+                } else {
+                    return ["Almost there! Is there anything else you'd like to share to complete your biography?"];
+                }
+            };
+
+            // Get personalized prompts based on user's name
+            const getPersonalizedPrompts = () => {
+                if (formData && formData.name) {
+                    return [
+                        `Hi ${formData.name}! What would you like to share about your life journey?`,
+                        `${formData.name}, what story would you like to tell today?`,
+                        `Let's continue ${formData.name}'s story. What's on your mind?`
+                    ];
+                }
+                return [];
+            };
+
+            // Combine all prompt types
+            const allPrompts = [
+                ...getContextualPrompts(),
+                ...getProgressPrompts(),
+                ...getPersonalizedPrompts(),
+                ...(basePrompts[section] || basePrompts.overview)
+            ];
+
+            // Remove duplicates and return unique prompts
+            return [...new Set(allPrompts)].slice(0, 8); // Limit to 8 prompts
+        };
+
+        const traditionalPrompts = {
             daily: [
                 "What was the most significant day of your life and why?",
                 "Describe a time when you had to make a difficult decision.",
@@ -97,13 +242,29 @@ const WritingPrompts = ({ onPromptSelect, currentSection }) => {
         };
 
         useEffect(() => {
-            generateNewPrompt();
-        }, [selectedCategory]);
+            if (selectedCategory === 'intelligent') {
+                const prompts = getIntelligentPrompts(currentSection);
+                setIntelligentPrompts(prompts);
+                if (prompts.length > 0) {
+                    setCurrentPrompt(prompts[0]);
+                }
+            } else {
+                const categoryPrompts = traditionalPrompts[selectedCategory] || traditionalPrompts.daily;
+                const randomIndex = Math.floor(Math.random() * categoryPrompts.length);
+                setCurrentPrompt(categoryPrompts[randomIndex]);
+            }
+        }, [selectedCategory, currentSection, formData]);
 
         const generateNewPrompt = () => {
-            const categoryPrompts = prompts[selectedCategory];
-            const randomIndex = Math.floor(Math.random() * categoryPrompts.length);
-            setCurrentPrompt(categoryPrompts[randomIndex]);
+            if (selectedCategory === 'intelligent') {
+                const prompts = getIntelligentPrompts(currentSection);
+                const randomIndex = Math.floor(Math.random() * prompts.length);
+                setCurrentPrompt(prompts[randomIndex]);
+            } else {
+                const categoryPrompts = traditionalPrompts[selectedCategory] || traditionalPrompts.daily;
+                const randomIndex = Math.floor(Math.random() * categoryPrompts.length);
+                setCurrentPrompt(categoryPrompts[randomIndex]);
+            }
         };
 
         const handlePromptSelect = () => {
