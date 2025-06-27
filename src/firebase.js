@@ -38,25 +38,85 @@ export const onAuthChange = (callback) => {
 // Database functions
 export const saveUserData = async(userId, data) => {
     try {
-        await setDoc(doc(db, 'users', userId), data);
+        console.log('Firebase: Saving data for user:', userId);
+        console.log('Firebase: Data to save:', {
+            formDataKeys: Object.keys(data.formData || {}),
+            photosCount: Object.keys(data.photos || {}).length,
+            recordingsCount: Object.keys(data.recordings || {}).length,
+            writingStreak: data.writingStreak,
+            lastWriteDate: data.lastWriteDate,
+            updatedAt: data.updatedAt
+        });
+
+        // Validate data before saving
+        if (!userId) {
+            console.error('Firebase: No user ID provided');
+            return false;
+        }
+
+        if (!data || typeof data !== 'object') {
+            console.error('Firebase: Invalid data provided');
+            return false;
+        }
+
+        // Ensure required fields exist
+        const dataToSave = {
+            formData: data.formData || {},
+            photos: data.photos || {},
+            recordings: data.recordings || {},
+            writingStreak: data.writingStreak || 0,
+            lastWriteDate: data.lastWriteDate || null,
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            createdAt: data.createdAt || new Date().toISOString()
+        };
+
+        await setDoc(doc(db, 'users', userId), dataToSave, { merge: true });
+        console.log('Firebase: Data saved successfully for user:', userId);
         return true;
     } catch (error) {
-        console.error('Error saving user data:', error);
+        console.error('Firebase: Error saving user data:', error);
+        console.error('Firebase: Error details:', {
+            code: error.code,
+            message: error.message,
+            userId: userId
+        });
         return false;
     }
 };
 
 export const getUserData = async(userId) => {
     try {
+        console.log('Firebase: Getting data for user:', userId);
+
+        if (!userId) {
+            console.error('Firebase: No user ID provided');
+            return null;
+        }
+
         const docRef = doc(db, 'users', userId);
         const docSnap = await getDoc(docRef);
+
         if (docSnap.exists()) {
-            return docSnap.data();
+            const data = docSnap.data();
+            console.log('Firebase: Data retrieved successfully:', {
+                formDataKeys: Object.keys(data.formData || {}),
+                photosCount: Object.keys(data.photos || {}).length,
+                recordingsCount: Object.keys(data.recordings || {}).length,
+                writingStreak: data.writingStreak,
+                lastWriteDate: data.lastWriteDate
+            });
+            return data;
         } else {
+            console.log('Firebase: No data found for user:', userId);
             return null;
         }
     } catch (error) {
-        console.error('Error getting user data:', error);
+        console.error('Firebase: Error getting user data:', error);
+        console.error('Firebase: Error details:', {
+            code: error.code,
+            message: error.message,
+            userId: userId
+        });
         return null;
     }
 };

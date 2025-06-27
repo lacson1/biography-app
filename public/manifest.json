@@ -1,0 +1,53 @@
+{
+    "short_name": "Life Stories",
+    "name": "Life Story Biography App",
+    "description": "Create and preserve your life stories with photos, recordings, and memories",
+    "icons": [{
+            "src": "favicon.ico",
+            "sizes": "64x64 32x32 24x24 16x16",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "logo192.png",
+            "type": "image/png",
+            "sizes": "192x192"
+        },
+        {
+            "src": "logo512.png",
+            "type": "image/png",
+            "sizes": "512x512"
+        }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#f59e0b",
+    "background_color": "#ffffff",
+    "orientation": "portrait-primary",
+    "categories": ["lifestyle", "productivity", "education"],
+    "lang": "en",
+    "dir": "ltr",
+    "scope": "/",
+    "prefer_related_applications": false,
+    "related_applications": [],
+    "shortcuts": [{
+            "name": "Write Today",
+            "short_name": "Write",
+            "description": "Start writing your story today",
+            "url": "/?section=overview",
+            "icons": [{
+                "src": "favicon.ico",
+                "sizes": "192x192"
+            }]
+        },
+        {
+            "name": "Add Memory",
+            "short_name": "Memory",
+            "description": "Add a special memory",
+            "url": "/?section=memories",
+            "icons": [{
+                "src": "favicon.ico",
+                "sizes": "192x192"
+            }]
+        }
+    ]
+}

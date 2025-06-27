@@ -5,16 +5,90 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#d97706" />
-    <meta name="description" content="Life Stories - Preserving memories for generations" />
+    <meta name="theme-color" content="#f59e0b" />
+    <meta name="description" content="Create and preserve your life stories with photos, recordings, and memories" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Life Stories">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#f59e0b">
+    <meta name="msapplication-tap-highlight" content="no">
+
+    <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/logo512.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="%PUBLIC_URL%/logo192.png" />
+
+    <!-- Manifest -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
     <title>Life Stories - Biography App</title>
 </head>
 
 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+
+    <!-- PWA Installation Prompt -->
+    <div id="pwa-install-prompt" style="display: none;" class="fixed bottom-4 left-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="font-semibold text-gray-800">Install Life Stories</h3>
+                <p class="text-sm text-gray-600">Add to home screen for quick access</p>
+            </div>
+            <div class="flex space-x-2">
+                <button id="pwa-install-accept" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">Install</button>
+                <button id="pwa-install-dismiss" class="text-gray-500 px-4 py-2 text-sm">Not now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredPrompt;
+        const installPrompt = document.getElementById('pwa-install-prompt');
+        const installAccept = document.getElementById('pwa-install-accept');
+        const installDismiss = document.getElementById('pwa-install-dismiss');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installPrompt.style.display = 'block';
+        });
+
+        installAccept.addEventListener('click', () => {
+            installPrompt.style.display = 'none';
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                } else {
+                    console.log('User dismissed the install prompt');
+                }
+                deferredPrompt = null;
+            });
+        });
+
+        installDismiss.addEventListener('click', () => {
+            installPrompt.style.display = 'none';
+        });
+    </script>
 </body>
 
 </html>

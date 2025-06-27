@@ -20,16 +20,21 @@ import {
     Sparkles,
     User,
     LogOut,
-    Settings
+    Settings,
+    Target
 } from 'lucide-react';
 import { auth, onAuthChange, saveUserData, getUserData, updateUserData } from './firebase';
 import Auth from './components/Auth';
 import AdminPanel from './components/AdminPanel';
+import WritingPrompts from './components/WritingPrompts';
 
 const BiographyApp = () => {
         const [user, setUser] = useState(null);
         const [loading, setLoading] = useState(true);
         const [showAdminPanel, setShowAdminPanel] = useState(false);
+        const [showWritingPrompts, setShowWritingPrompts] = useState(false);
+        const [writingStreak, setWritingStreak] = useState(0);
+        const [lastWriteDate, setLastWriteDate] = useState(null);
         const [formData, setFormData] = useState({
             name: '',
             overview: '',
@@ -91,8 +96,17 @@ const BiographyApp = () => {
         // Load user-specific data
         const loadUserData = async(userId) => {
             try {
+                console.log('Loading data for user:', userId);
                 const userData = await getUserData(userId);
                 if (userData) {
+                    console.log('User data loaded successfully:', {
+                        formDataKeys: Object.keys(userData.formData || {}),
+                        photosCount: Object.keys(userData.photos || {}).length,
+                        recordingsCount: Object.keys(userData.recordings || {}).length,
+                        writingStreak: userData.writingStreak,
+                        lastWriteDate: userData.lastWriteDate
+                    });
+
                     setFormData(userData.formData || {
                         name: '',
                         overview: '',
@@ -106,10 +120,91 @@ const BiographyApp = () => {
                     });
                     setPhotos(userData.photos || {});
                     setRecordings(userData.recordings || {});
+                    setWritingStreak(userData.writingStreak || 0);
+                    setLastWriteDate(userData.lastWriteDate || null);
+                } else {
+                    console.log('No existing data found for user:', userId);
+                    // Initialize with empty data
+                    setFormData({
+                        name: '',
+                        overview: '',
+                        childhood: '',
+                        family: '',
+                        career: '',
+                        achievements: '',
+                        wisdom: '',
+                        memories: [],
+                        timeline: []
+                    });
+                    setPhotos({});
+                    setRecordings({});
+                    setWritingStreak(0);
+                    setLastWriteDate(null);
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
             }
+        };
+
+        // Manual save function for testing
+        const manualSave = async() => {
+            if (!user) {
+                console.error('No user logged in');
+                return;
+            }
+
+            console.log('Manual save triggered');
+            setAutoSaveStatus('saving');
+
+            try {
+                const success = await saveUserData(user.uid, {
+                    formData,
+                    photos,
+                    recordings,
+                    writingStreak,
+                    lastWriteDate,
+                    updatedAt: new Date().toISOString()
+                });
+
+                if (success) {
+                    setAutoSaveStatus('saved');
+                    console.log('Manual save successful');
+                } else {
+                    setAutoSaveStatus('error');
+                    console.error('Manual save failed');
+                }
+            } catch (error) {
+                console.error('Manual save error:', error);
+                setAutoSaveStatus('error');
+            }
+        };
+
+        // Update writing streak
+        const updateWritingStreak = () => {
+            const today = new Date().toDateString();
+            if (lastWriteDate !== today) {
+                const newStreak = lastWriteDate ? writingStreak + 1 : 1;
+                setWritingStreak(newStreak);
+                setLastWriteDate(today);
+
+                if (user) {
+                    saveUserData(user.uid, {
+                        writingStreak: newStreak,
+                        lastWriteDate: today,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+            }
+        };
+
+        // Handle writing prompt selection
+        const handlePromptSelect = (prompt) => {
+            setShowWritingPrompts(false);
+            // Add the prompt to the current section
+            const currentContent = formData[currentSection] || '';
+            const newContent = currentContent + (currentContent ? '\n\n' : '') + `Prompt: ${prompt}\n\n`;
+            handleInputChange(currentSection, newContent);
+            updateWritingStreak();
         };
 
         // Auto-save functionality
@@ -152,12 +247,7 @@ const BiographyApp = () => {
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         };
 
-        const handleInputChange = (field, value) => {
-            setFormData(prev => ({...prev, [field]: value }));
-            triggerAutoSave();
-        };
-
-        const triggerAutoSave = () => {
+        const triggerAutoSave = (updatedData = null) => {
             if (!user) return;
 
             setAutoSaveStatus('saving');
@@ -166,18 +256,55 @@ const BiographyApp = () => {
             }
             autoSaveTimerRef.current = setTimeout(async() => {
                 try {
-                    await saveUserData(user.uid, {
+                    // Use the updated data if provided, otherwise use current state
+                    const dataToSave = updatedData || {
                         formData,
                         photos,
                         recordings,
+                        writingStreak,
+                        lastWriteDate,
                         updatedAt: new Date().toISOString()
+                    };
+
+                    console.log('Saving user data:', {
+                        userId: user.uid,
+                        dataKeys: Object.keys(dataToSave),
+                        formDataKeys: Object.keys(dataToSave.formData || {}),
+                        hasPhotos: Object.keys(dataToSave.photos || {}).length,
+                        hasRecordings: Object.keys(dataToSave.recordings || {}).length
                     });
-                    setAutoSaveStatus('saved');
+
+                    const success = await saveUserData(user.uid, dataToSave);
+
+                    if (success) {
+                        setAutoSaveStatus('saved');
+                        console.log('Data saved successfully');
+                    } else {
+                        setAutoSaveStatus('error');
+                        console.error('Failed to save data');
+                    }
                 } catch (error) {
                     console.error('Auto-save error:', error);
                     setAutoSaveStatus('error');
                 }
             }, 1000);
+        };
+
+        const handleInputChange = (field, value) => {
+            setFormData(prev => {
+                const newFormData = {...prev, [field]: value };
+                // Pass the updated data to triggerAutoSave
+                triggerAutoSave({
+                    formData: newFormData,
+                    photos,
+                    recordings,
+                    writingStreak,
+                    lastWriteDate,
+                    updatedAt: new Date().toISOString()
+                });
+                return newFormData;
+            });
+            updateWritingStreak();
         };
 
         const addMemory = () => {
@@ -186,20 +313,42 @@ const BiographyApp = () => {
                 title: `Special Memory ${formData.memories.length + 1}`,
                 content: ''
             };
-            setFormData(prev => ({
-                ...prev,
-                memories: [...prev.memories, newMemory]
-            }));
+            setFormData(prev => {
+                const newFormData = {
+                    ...prev,
+                    memories: [...prev.memories, newMemory]
+                };
+                triggerAutoSave({
+                    formData: newFormData,
+                    photos,
+                    recordings,
+                    writingStreak,
+                    lastWriteDate,
+                    updatedAt: new Date().toISOString()
+                });
+                return newFormData;
+            });
             setCurrentSection(`memory-${newMemory.id}`);
-            triggerAutoSave();
+            updateWritingStreak();
         };
 
         const updateMemory = (id, content) => {
-            setFormData(prev => ({
-                ...prev,
-                memories: prev.memories.map(m => m.id === id ? {...m, content } : m)
-            }));
-            triggerAutoSave();
+            setFormData(prev => {
+                const newFormData = {
+                    ...prev,
+                    memories: prev.memories.map(m => m.id === id ? {...m, content } : m)
+                };
+                triggerAutoSave({
+                    formData: newFormData,
+                    photos,
+                    recordings,
+                    writingStreak,
+                    lastWriteDate,
+                    updatedAt: new Date().toISOString()
+                });
+                return newFormData;
+            });
+            updateWritingStreak();
         };
 
         const addTimelineEvent = () => {
@@ -208,11 +357,21 @@ const BiographyApp = () => {
                 event: 'New Event',
                 category: 'family'
             };
-            setFormData(prev => ({
-                ...prev,
-                timeline: [...prev.timeline, newEvent]
-            }));
-            triggerAutoSave();
+            setFormData(prev => {
+                const newFormData = {
+                    ...prev,
+                    timeline: [...prev.timeline, newEvent]
+                };
+                triggerAutoSave({
+                    formData: newFormData,
+                    photos,
+                    recordings,
+                    writingStreak,
+                    lastWriteDate,
+                    updatedAt: new Date().toISOString()
+                });
+                return newFormData;
+            });
         };
 
         const handlePhotoUpload = (sectionId) => {
@@ -228,11 +387,21 @@ const BiographyApp = () => {
                             url: e.target.result,
                             caption: ''
                         };
-                        setPhotos(prev => ({
-                            ...prev,
-                            [sectionId]: [...(prev[sectionId] || []), newPhoto]
-                        }));
-                        triggerAutoSave();
+                        setPhotos(prev => {
+                            const newPhotos = {
+                                ...prev,
+                                [sectionId]: [...(prev[sectionId] || []), newPhoto]
+                            };
+                            triggerAutoSave({
+                                formData,
+                                photos: newPhotos,
+                                recordings,
+                                writingStreak,
+                                lastWriteDate,
+                                updatedAt: new Date().toISOString()
+                            });
+                            return newPhotos;
+                        });
                     };
                     reader.readAsDataURL(file);
                 }
@@ -240,13 +409,23 @@ const BiographyApp = () => {
         };
 
         const updatePhotoCaption = (sectionId, photoId, caption) => {
-            setPhotos(prev => ({
-                ...prev,
-                [sectionId]: prev[sectionId].map(photo =>
-                    photo.id === photoId ? {...photo, caption } : photo
-                )
-            }));
-            triggerAutoSave();
+            setPhotos(prev => {
+                const newPhotos = {
+                    ...prev,
+                    [sectionId]: prev[sectionId].map(photo =>
+                        photo.id === photoId ? {...photo, caption } : photo
+                    )
+                };
+                triggerAutoSave({
+                    formData,
+                    photos: newPhotos,
+                    recordings,
+                    writingStreak,
+                    lastWriteDate,
+                    updatedAt: new Date().toISOString()
+                });
+                return newPhotos;
+            });
         };
 
         const startRecording = async(sectionId) => {
@@ -256,14 +435,29 @@ const BiographyApp = () => {
                 const chunks = [];
 
                 recorder.ondataavailable = (e) => chunks.push(e.data);
+
+                const saveRecording = (blob) => {
+                    const url = URL.createObjectURL(blob);
+                    setRecordings(prev => {
+                        const newRecordings = {
+                            ...prev,
+                            [sectionId]: url
+                        };
+                        triggerAutoSave({
+                            formData,
+                            photos,
+                            recordings: newRecordings,
+                            writingStreak,
+                            lastWriteDate,
+                            updatedAt: new Date().toISOString()
+                        });
+                        return newRecordings;
+                    });
+                };
+
                 recorder.onstop = () => {
                     const blob = new Blob(chunks, { type: 'audio/webm' });
-                    const url = URL.createObjectURL(blob);
-                    setRecordings(prev => ({
-                        ...prev,
-                        [sectionId]: url
-                    }));
-                    triggerAutoSave();
+                    saveRecording(blob);
                 };
 
                 recorder.start();
@@ -278,12 +472,7 @@ const BiographyApp = () => {
                 recorder.onstop = () => {
                     clearInterval(timer);
                     const blob = new Blob(chunks, { type: 'audio/webm' });
-                    const url = URL.createObjectURL(blob);
-                    setRecordings(prev => ({
-                        ...prev,
-                        [sectionId]: url
-                    }));
-                    triggerAutoSave();
+                    saveRecording(blob);
                 };
             } catch (error) {
                 console.error('Error starting recording:', error);
@@ -417,6 +606,31 @@ const BiographyApp = () => {
                 () => setShowAdminPanel(false)
             }
             />;
+        }
+
+        // Writing prompts view
+        if (showWritingPrompts) {
+            return ( <
+                div className = "min-h-screen bg-gradient-to-br from-purple-50 to-pink-100" >
+                <
+                div className = "max-w-4xl mx-auto px-6 py-8" >
+                <
+                div className = "flex items-center justify-between mb-8" >
+                <
+                h1 className = "text-3xl font-bold text-gray-800" > Writing Prompts < /h1> <
+                button onClick = {
+                    () => setShowWritingPrompts(false)
+                }
+                className = "bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors" >
+                Back to Editor <
+                /button> < /
+                div > <
+                WritingPrompts onPromptSelect = { handlePromptSelect }
+                currentSection = { currentSection }
+                /> < /
+                div > <
+                /div>
+            );
         }
 
         // Welcome screen
@@ -710,6 +924,15 @@ const BiographyApp = () => {
                 span > { user.email } < /span> < /
                 div >
 
+                { /* Writing streak */ } <
+                div className = "flex items-center space-x-2 text-sm text-green-600" >
+                <
+                Clock className = "h-4 w-4" / >
+                <
+                span > { writingStreak }
+                day streak < /span> < /
+                div >
+
                 { /* Auto-save status */ } <
                 div className = "flex items-center space-x-2" > {
                     autoSaveStatus === 'saving' && ( <
@@ -733,6 +956,26 @@ const BiographyApp = () => {
 
                 { /* Action buttons */ } <
                 div className = "flex space-x-2" >
+                <
+                button onClick = { manualSave }
+                className = "bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2" >
+                <
+                Save className = "h-4 w-4" / >
+                <
+                span > Save Now < /span> < /
+                button >
+
+                <
+                button onClick = {
+                    () => setShowWritingPrompts(true)
+                }
+                className = "bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2" >
+                <
+                Target className = "h-4 w-4" / >
+                <
+                span > Prompts < /span> < /
+                button >
+
                 <
                 button onClick = {
                     () => setShowTimeline(true)
