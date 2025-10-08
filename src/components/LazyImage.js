@@ -17,6 +17,11 @@ const LazyImage = ({
     const observerRef = useRef(null);
 
     useEffect(() => {
+        setIsLoaded(false);
+        setHasError(false);
+    }, [src]);
+
+    useEffect(() => {
         if (!imgRef.current) return;
 
         observerRef.current = new IntersectionObserver(
