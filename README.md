@@ -83,6 +83,17 @@ npm start
 
 The app will open at `http://localhost:3000`
 
+### Demo login (design & development)
+
+While building the UI locally, use **Continue with Demo** on the sign-in screen. It signs into a shared demo account with sample biography content (no manual registration).
+
+| Default | Value |
+|---------|-------|
+| Email | `demo@design.local` |
+| Password | `DesignDemo2024!` |
+
+The button appears when `NODE_ENV=development` (e.g. `npm start`). To enable in other environments, set `REACT_APP_ENABLE_DEMO_LOGIN=true` in `.env`. Override credentials with `REACT_APP_DEMO_EMAIL` and `REACT_APP_DEMO_PASSWORD`.
+
 ## 👥 User Management
 
 ### Creating Admin Users
