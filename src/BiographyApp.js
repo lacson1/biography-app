@@ -31,6 +31,11 @@ import {
 import { auth, onAuthChange, saveUserData, getUserData, updateUserData } from './firebase';
 import Auth from './components/Auth';
 import AdminPanel from './components/AdminPanel';
+import {
+    hasLocalDemoSession,
+    getLocalDemoUser,
+    clearLocalDemoSession,
+} from './demoAuth';
 import WritingPrompts from './components/WritingPrompts';
 
 const BiographyApp = () => {
@@ -93,11 +98,19 @@ const BiographyApp = () => {
 
         // Authentication state management
         useEffect(() => {
-            const unsubscribe = onAuthChange((user) => {
-                setUser(user);
+            if (hasLocalDemoSession()) {
+                const demoUser = getLocalDemoUser();
+                setUser(demoUser);
                 setLoading(false);
-                if (user) {
-                    loadUserData(user.uid);
+                loadUserData(demoUser.uid);
+                return undefined;
+            }
+
+            const unsubscribe = onAuthChange((firebaseUser) => {
+                setUser(firebaseUser);
+                setLoading(false);
+                if (firebaseUser) {
+                    loadUserData(firebaseUser.uid);
                 }
             });
 
@@ -1127,6 +1140,12 @@ Generated on: ${new Date().toLocaleDateString()}`;
             return ( <
                 Auth onAuthSuccess = {
                     () => {}
+                }
+                onLocalDemoLogin = {
+                    (demoUser) => {
+                        setUser(demoUser);
+                        loadUserData(demoUser.uid);
+                    }
                 }
                 isAdmin = { false }
                 onAdminPanel = {

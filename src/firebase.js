@@ -35,8 +35,32 @@ export const onAuthChange = (callback) => {
     return onAuthStateChanged(auth, callback);
 };
 
+const LOCAL_DEMO_UID = 'demo-local-design';
+
+function readLocalDemoData(userId) {
+    try {
+        const raw = localStorage.getItem(`biography_user_${userId}`);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeLocalDemoData(userId, data) {
+    try {
+        localStorage.setItem(`biography_user_${userId}`, JSON.stringify(data));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 // Database functions
 export const saveUserData = async(userId, data) => {
+    if (userId === LOCAL_DEMO_UID) {
+        return writeLocalDemoData(userId, data);
+    }
+
     try {
         console.log('Firebase: Saving data for user:', userId);
         console.log('Firebase: Data to save:', {
@@ -85,6 +109,10 @@ export const saveUserData = async(userId, data) => {
 };
 
 export const getUserData = async(userId) => {
+    if (userId === LOCAL_DEMO_UID) {
+        return readLocalDemoData(userId);
+    }
+
     try {
         console.log('Firebase: Getting data for user:', userId);
 
